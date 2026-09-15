@@ -1,0 +1,18 @@
+# Partial xshells.par — Protocol P pilot (§F4)
+# E_omega = 1e-3, Pr = 1, Pm = 10 (eta = 0.1), Ra/Rac = 25,
+# Y10 + Y30 pattern, δq = 0.0175 half-range. Conducting stratified top
+# region; layer strengths Hs/L = 0, 0.12, 0.24 (Nmax/Omega = 10 at Hs/L > 0).
+
+nu = 1.0
+eta = 0.1
+kappa = 1.0
+Omega0 = 1000.0
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+BC_U = 0,0
+BC_T = 1,2
+# TODO(audit): Ra→buoyancy conversion at Ra/Rac = 25, Y10+Y30 map in half-range
+#   convention, conductivity-vs-flow separation plan (passive replay with
+#   changed top-region diffusivity needs custom tracer extension), parity
+#   projector implementation (PD/PQ) for the α ∈ {0, 1/2, 1} test.
