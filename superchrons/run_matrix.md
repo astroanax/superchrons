@@ -37,6 +37,8 @@ Amplitude brackets δq = 0.01, 0.0175, 0.03; add symmetric-pattern control.
 
 ## Common acceptance (§F1)
 - Dynamo benchmark + free-decay test + imposed-map test pass first.
+- Uninterrupted-vs-restart comparison with identical inputs before trusting
+  long-time statistics (§F7).
 - Resolution: ≥10 points across mechanical/stratification layers; 1.5× radial
   + angular refinement check with halved dt on selected cases; <5% change in
   energy/flow/wave/budget diagnostics.
@@ -46,3 +48,14 @@ Amplitude brackets δq = 0.01, 0.0175, 0.03; add symmetric-pattern control.
 - Events: polarity sets at |Dsurf| > 0.4·Dref (Dref from training only),
   persistence τu; reversal = committed-set to committed-set; sensitivity at
   0.25 and 0.6. Parent state (not sample) is the resampling unit.
+
+## Staged allocation (§F7)
+1. One reproduction anchor + diagnostics per protocol first — no matrix yet.
+2. Debugging batch: 4 parents × 2 clones × 2 arms = 16 short continuations.
+3. Full 16-parent × 8-clone × 2-arm design (256 runs + sham/restoration arms)
+   only after manipulation + budget checks pass and pilot uncertainty supports it.
+4. Seeds must actually change initial perturbations/forcing; match across arms;
+   keep parent-state clustering; restart segments are not independent replicates.
+5. Scratch is purged 30 days after timestamp: copy checkpoints, manifests,
+   diagnostics, snapshots to persistent storage sooner, verify checksums, keep
+   >1 checkpoint generation. Never share mutable output/restart files between jobs.

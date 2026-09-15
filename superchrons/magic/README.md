@@ -1,5 +1,7 @@
-# MagIC 6.3 counterpart notes (paper §F1, §F3)
-# MagIC is the INDEPENDENT contrast implementation, not a parameter translation.
+# MagIC 6.3 counterpart notes (paper §F1, §F7)
+# MagIC is the INDEPENDENT contrast implementation, not a parameter translation,
+# and per §F7 it is deferred to one informative contrast AFTER the first
+# XSHELLS implementation passes validation.
 # Setup rules from the manuscript:
 # - Use MagIC's own sample namelists and test cases for its setup.
 # - ktops=2 + harmonic s_top entries specify an outer temperature/entropy

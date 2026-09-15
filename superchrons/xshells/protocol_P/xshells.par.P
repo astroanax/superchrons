@@ -1,7 +1,8 @@
 # Partial xshells.par — Protocol P pilot (§F4)
 # E_omega = 1e-3, Pr = 1, Pm = 10 (eta = 0.1), Ra/Rac = 25,
 # Y10 + Y30 pattern, δq = 0.0175 half-range. Conducting stratified top
-# region; layer strengths Hs/L = 0, 0.12, 0.24 (Nmax/Omega = 10 at Hs/L > 0).
+# Hs/L = 0, 0.12, 0.24 (Nmax/Omega = 10 at Hs/L > 0). Launched with the
+# hybrid binary (§F7): srun --cpu-bind=verbose,cores ./xsbig_hyb.
 
 nu = 1.0
 eta = 0.1

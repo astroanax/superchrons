@@ -1,0 +1,394 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+00_provenance/
+  MANIFEST.md
+analysis/
+  f5_prototype.py
+magic/
+  README.md
+slurm/
+  pilot.sbatch
+xshells/
+  protocol_K/
+    xshells.par.K
+  protocol_P/
+    xshells.par.P
+  protocol_W/
+    xshells.par.W
+  build_madhava.sh
+README.md
+run_matrix.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="00_provenance/MANIFEST.md">
+# Run manifest — copy into every run directory, fill in, never edit after.
+# Paper §F1: archive immutable copies before production.
+
+- date:
+- protocol/cell: (e.g. W02)
+- xshells commit:
+- patches applied:
+- compilers: gcc 8.3.0 / openmpi 3.1.4 (madhava modules gnu8, openmpi3)
+- precision / grid / time integrator:
+- input files (checksums):
+- restart provenance:
+- seeds:
+- slurm job id:
+- output units:
+</file>
+
+<file path="analysis/f5_prototype.py">
+"""Executable paper code from Appendix F §F5 + event/budget check stubs.
+
+projected_drag and poisson_rate_interval are transcribed from the manuscript
+(including its toy checks). Everything else is a stub marked TODO until the
+solver adapters exist. Solver-independent: runs anywhere with numpy/scipy.
+"""
+import numpy as np
+from scipy.stats import chi2
+
+
+def projected_drag(u, Q, W, gamma):
+    assert gamma >= 0
+    gram = Q.conj().T @ W @ Q
+    assert np.allclose(gram, np.eye(Q.shape[1]))
+    amp = Q.conj().T @ (W @ u)
+    force = -gamma * (Q @ amp)
+    power = np.vdot(u, W @ force).real
+    return force, power
+
+
+def poisson_rate_interval(n, exposure, a=0.05):
+    if n < 0 or int(n) != n or exposure <= 0:
+        raise ValueError("Invalid count/exposure")
+    if not 0 < a < 1:
+        raise ValueError("Invalid significance")
+    low = 0.0 if n == 0 else (chi2.ppf(a / 2, 2 * n) / (2 * exposure))
+    high = chi2.ppf(1 - a / 2, 2 * (n + 1))
+    return low, high / (2 * exposure)
+
+
+def dipole_budget_error(d_surf_dot, AD, OD):
+    """Eq. (F3): rms(Ddotsurf - AD - OD) / (rms(AD) + rms(OD)). Target < 0.01."""
+    num = np.sqrt(np.mean((np.asarray(d_surf_dot) - np.asarray(AD)
+                           - np.asarray(OD)) ** 2))
+    den = (np.sqrt(np.mean(np.asarray(AD) ** 2))
+           + np.sqrt(np.mean(np.asarray(OD) ** 2)))
+    if den == 0:
+        return np.inf  # report absolute error instead (paper §F1)
+    return num / den
+
+
+def detect_events(t, Dsurf, Dref, lo=0.25, hi=0.6, main=0.4, tau_u=None):
+    """TODO: event detector stub. Polarity sets at |Dsurf| > main*Dref with
+    persistence tau_u; reversal = committed-set to committed-set; excursion =
+    return to origin set; multipolar occupancy counted separately. Sensitivity
+    at thresholds lo/hi applied identically to every treatment. Test on
+    synthetic excursions, persistent reversals, irregular sampling, truncated
+    runs before production (paper §F5)."""
+    raise NotImplementedError
+
+
+if __name__ == "__main__":
+    # Toy checks from the manuscript (not geodynamo measurements).
+    W = np.diag([2.0, 3.0])
+    Q = np.array([[1 / np.sqrt(2)], [0.0]])
+    u = np.array([2.0, 1.0])
+    _, power = projected_drag(u, Q, W, 0.3)
+    assert np.isclose(power, -2.4)
+    lo, hi = poisson_rate_interval(0, 10.0)
+    assert lo == 0.0 and np.isclose(hi, 0.3688879454)
+    print("toy checks pass")
+</file>
+
+<file path="magic/README.md">
+# MagIC 6.3 counterpart notes (paper §F1, §F3)
+# MagIC is the INDEPENDENT contrast implementation, not a parameter translation.
+# Setup rules from the manuscript:
+# - Use MagIC's own sample namelists and test cases for its setup.
+# - ktops=2 + harmonic s_top entries specify an outer temperature/entropy
+#   gradient: convert sign and normalization to physical outward heat flux.
+# - Do NOT use MagIC's strat density-contrast parameter as a stable-layer
+#   buoyancy frequency; set up stratification through MagIC's own interface.
+# - MagIC diagnostics/extensions must be implemented separately.
+# TODO(audit): pick the decisive-contrast cells to repeat in MagIC AFTER the
+# XSHELLS pilot (paper §F6 order: XSHELLS first, MagIC on decisive contrasts).
+</file>
+
+<file path="slurm/pilot.sbatch">
+#!/usr/bin/env bash
+# SLURM template for XSHELLS pilots on madhava (single-node only: MaxNodes=1).
+# Partitions: testq (1h, smoke tests) / shortq (7d) / mediumq (14d) / longq (30d).
+# Nodes: 40 CPUs, ~169 GB each. Request --mem explicitly (1 GB/CPU default).
+#SBATCH --job-name=xshells_W00
+#SBATCH --partition=shortq
+#SBATCH --nodes=1
+#SBATCH --ntasks=40
+#SBATCH --mem=150G
+#SBATCH --time=7-00:00:00
+#SBATCH --output=run_%j.log
+
+set -euo pipefail
+module load gnu8/8.3.0 openmpi3/3.1.4 2>/dev/null || module load gnu8 openmpi3
+cd "$SLURM_SUBMIT_DIR"
+mpirun -n 40 ~/superchrons/src/xshells/xsbig_mpi
+</file>
+
+<file path="xshells/protocol_K/xshells.par.K">
+# Partial xshells.par — Protocol K pilot (§F3)
+# E_omega = 1e-4, Pr = 1, Pm = 5 (eta = 0.2), bottom-driven buoyancy,
+# stress-free impenetrable velocity boundaries. Magnetic domain + scalar
+# forcing need a separate physical setup; baseline bottom flux found by
+# pilot-only search for a sustained dipolar neutral state, then frozen.
+
+nu = 1.0
+eta = 0.2
+kappa = 1.0
+Omega0 = 10000.0
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+BC_U = 2,2
+BC_T = 1,2
+# TODO(audit): bottom-flux search procedure, stratification-layer construction
+#   (Hs/L × Nmax/Omega matrix) with maintaining term, N^2(r) measurement,
+#   power bookkeeping across layer cases.
+</file>
+
+<file path="xshells/protocol_P/xshells.par.P">
+# Partial xshells.par — Protocol P pilot (§F4)
+# E_omega = 1e-3, Pr = 1, Pm = 10 (eta = 0.1), Ra/Rac = 25,
+# Y10 + Y30 pattern, δq = 0.0175 half-range. Conducting stratified top
+# region; layer strengths Hs/L = 0, 0.12, 0.24 (Nmax/Omega = 10 at Hs/L > 0).
+
+nu = 1.0
+eta = 0.1
+kappa = 1.0
+Omega0 = 1000.0
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+BC_U = 0,0
+BC_T = 1,2
+# TODO(audit): Ra→buoyancy conversion at Ra/Rac = 25, Y10+Y30 map in half-range
+#   convention, conductivity-vs-flow separation plan (passive replay with
+#   changed top-region diffusivity needs custom tracer extension), parity
+#   projector implementation (PD/PQ) for the α ∈ {0, 1/2, 1} test.
+</file>
+
+<file path="xshells/protocol_W/xshells.par.W">
+# Partial xshells.par — Protocol W transport/rotation/fluid boundaries (§F1, §F2)
+# Viscous units L = 1. NOT a complete dynamo: still supply gravity/buoyancy
+# conversion, base profile, flux map (heteroflux problem), grid, restarts.
+# Anchors: EMS = 1.2e-5 → E_omega = 2.4e-5; Pr = Pm = 1; RaV = 2500.
+
+nu = 1.0
+eta = 1.0
+kappa = 1.0
+Omega0 = 41666.6667
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+BC_U = 0,0
+BC_T = 1,2
+# TODO(audit): gravity/buoyancy coefficient conversion from RaV = 2500,
+#   basal thermal driving profile, Y21/Y22 heteroflux maps at q* = 17/18/20
+#   with the source heat-flux normalization, grid + restart provenance.
+</file>
+
+<file path="xshells/build_madhava.sh">
+#!/usr/bin/env bash
+# Build SHTns + XSHELLS 2.13 on madhava. Run INTERACTIVELY on a testq
+# allocation or the login node for the configure step only; the compile
+# itself should go through slurm (see slurm/build.sh).
+# Paper §F1: pin revisions, archive immutable copies before production.
+set -euo pipefail
+
+# --- 0. environment (madhava module stack) ---
+module load gnu8/8.3.0 openmpi3/3.1.4 2>/dev/null || module load gnu8 openmpi3
+export CC=mpicc CXX=mpicxx FC=mpif90
+FFTW_INC=/usr/local/include   # verified: fftw3.h present on master node
+
+# --- 1. fetch (BLOCKER workaround: madhava git lacks remote-https) ---
+# Do this on a machine with working git/https, then scp the trees up:
+#   git clone https://github.com/nschaeff/shtns.git
+#   git clone https://bitbucket.org/nschaeff/xshells.git
+#   cd xshells && git checkout <PINNED_REVISION> && git log -1 --format=%H > REVISION
+# then: scp -r shtns xshells madhava:~/superchrons/src/
+#
+# Record the pinned XSHELLS 2.13-series commit in 00_provenance/MANIFEST.md.
+SRC=$HOME/superchrons/src
+test -d "$SRC/shtns" || { echo "MISSING $SRC/shtns (see fetch note above)"; exit 1; }
+test -d "$SRC/xshells" || { echo "MISSING $SRC/xshells (see fetch note above)"; exit 1; }
+
+# --- 2. SHTns ---
+cd "$SRC/shtns"
+./configure --prefix="$SRC/shtns-install" --enable-openmp --with-fftw="$FFTW_INC"
+make -j40 && make install
+
+# --- 3. XSHELLS ---
+cd "$SRC/xshells"
+./configure SHTNS="$SRC/shtns-install"
+cp problems/geodynamo/xshells.hpp ./xshells.hpp   # adapt + validate first
+cp problems/geodynamo/xshells.par ./xshells.par
+make test                    # must pass before production
+make xsbig_mpi xspp
+
+echo "BUILD OK. Binaries: $SRC/xshells/xsbig_mpi, xspp"
+echo "Record commit + compiler/MPI versions in 00_provenance/MANIFEST.md"
+mpirun -n 4 ./xsbig_mpi --version 2>&1 | head -3 || true
+</file>
+
+<file path="README.md">
+# Superchron numerical experiments — setup for audit (no runs yet)
+
+Source paper: `~/.hermes/webui/attachments/027552552498/main-28.pdf`
+(plaintext: same dir, `main-28.txt`). Appendix F (§F1–F6, txt lines 1737–2183)
+is the plan implemented here. It is a proposed plan, not a claim that runs exist.
+
+## What this folder holds
+
+- `00_provenance/` — run-manifest template. Every run gets its own directory
+  with an immutable manifest copy (paper §F1: commit, patches, compiler/MPI
+  versions, grid, inputs, restart provenance, seeds).
+- `xshells/` — build script + per-protocol native input fragments
+  (`protocol_W/`, `protocol_K/`, `protocol_P/`). XSHELLS 2.13 is the primary
+  implementation (§F1); MagIC 6.3 is the cross-code contrast.
+- `magic/` — MagIC counterpart notes (independent setup, not translated names).
+- `analysis/` — executable paper code (projected drag, Poisson interval) plus
+  stubs for the event detector and dipole-budget check. Runs anywhere.
+- `slurm/` — job templates for madhava.
+- `run_matrix.md` — pilot cells per protocol.
+
+## Common physics (§F1)
+
+Shell ratio ri/ro = 0.35. Viscous units L = ro − ri = 1, time L²/ν = 1:
+
+    ν = 1, η = 1/Pm, κT = 1/Pr, Ω = 1/E_omega        (F1)
+
+E_omega = ν/(ΩL²). Majumder–Sreenivasan use EMS = ν/(2ΩL²), so
+E_omega = 2·EMS. XSHELLS `Omega0` takes the E_omega convention.
+Magnetic fields in Alfvén-speed units. Never paste a source Rayleigh number
+into another code without this conversion.
+
+Boundary-flux maps for matched comparisons (§F1, F2):
+
+    q(θ,φ) = qbar + qa·H(θ,φ),  <H>S = 0, <H²>S = 1      (F2)
+
+Report qa, both extrema, mean, and total-vs-superadiabatic denominator.
+
+## Protocol anchors
+
+- W (slow-MAC-wave, §F2): EMS = 1.2e-5, Pr = Pm = 1, RaV = 2500;
+  Y21 at q* = 17, 18, 20 (dipolar / reversing / multipolar), Y22 symmetric
+  control. Seven pilot cells + reflected/mixed patterns.
+- K (upwelling vs circulation, §F3): E_omega = 1e-4, Pr = 1, Pm = 5,
+  bottom-driven, stress-free impenetrable (BC_U = 2,2); η = 0.2, κT = 1,
+  Ω = 1e4 in viscous units. Layer matrix Hs/L × Nmax/Ω + power reporting.
+- P (stratified dipole–quadrupole, §F4): E_omega = 1e-3, Pr = 1, Pm = 10,
+  Ra/Rac = 25, Y10+Y30 at δq = 0.0175 (half-range); Hs/L = 0, 0.12, 0.24.
+
+## What needs your audit decision
+
+1. Reproduce one anchor per protocol before any intervention.
+2. Interventions (projector damping, δu upwelling, parity-block α) are
+   custom code to write against the pinned XSHELLS revision — not switches.
+3. Prespecified primary contrast per mechanism + one common train/test split
+   before production (paper §F6).
+</file>
+
+<file path="run_matrix.md">
+# Pilot run matrix (all pilot choices from paper Appendix F, not Earth values)
+
+## W — slow-MAC-wave (§F2)
+Anchor: EMS = 1.2e-5 → E_omega = 2.4e-5 → Omega0 = 1/2.4e-5 ≈ 41666.7.
+Pr = Pm = 1 → eta = 1.0, kappa = 1.0. Basal thermal driving, no-slip (BC_U = 0,0),
+insulating inner/outer magnetic boundaries, source heat-flux normalization.
+
+| cell | pattern | q* | role |
+|------|---------|----|------|
+| W00 | uniform | 0 | baseline |
+| W01 | Y21 | 17 | dipolar anchor |
+| W02 | Y21 | 18 | reversing anchor |
+| W03 | Y21 | 20 | multipolar anchor |
+| W04 | Y22 | 17 | symmetric control |
+| W05 | Y22 | 18 | symmetric control |
+| W06 | Y22 | 20 | symmetric control |
+
+Follow-ups: reflected forcing, paired initial polarities, mixed Y21+Y22.
+Four statistically independent continuations per production cell.
+Intervention pilot: 16 parent states × 8 clones per arm, horizon 20·τu.
+
+## K — upwelling vs circulation (§F3)
+Pilot: E_omega = 1e-4 → Omega0 = 1e4. Pr = 1, Pm = 5 → eta = 0.2, kappa = 1.0.
+Bottom-driven buoyancy, stress-free impenetrable (BC_U = 2,2).
+Baseline: pilot-only bottom-flux search for sustained dipolar neutral state;
+freeze forcing before treatments.
+
+Layer matrix: neutral top + Hs/L ∈ {0.05, 0.10} × Nmax/Ω ∈ {0.5, 1, 2}.
+Keep bottom flux + diffusivities fixed first; report changed buoyancy power.
+Selected cells: bottom forcing ±20%.
+
+## P — stratified dipole–quadrupole (§F4)
+Anchor: E_omega = 1e-3 → Omega0 = 1e3. Pr = 1, Pm = 10 → eta = 0.1, kappa = 1.0.
+Ra/Rac = 25. Pattern Y10 + Y30, δq = 0.0175 (half-range convention).
+Hs/L = 0, 0.12, 0.24; at Hs/L > 0 start Nmax/Ω = 10.
+Amplitude brackets δq = 0.01, 0.0175, 0.03; add symmetric-pattern control.
+
+## Common acceptance (§F1)
+- Dynamo benchmark + free-decay test + imposed-map test pass first.
+- Resolution: ≥10 points across mechanical/stratification layers; 1.5× radial
+  + angular refinement check with halved dt on selected cases; <5% change in
+  energy/flow/wave/budget diagnostics.
+- Dipole-budget error εD = rms(Ḋsurf − AD − OD)/(rms(AD) + rms(OD)) < 0.01.
+- Sampling: ordinary diagnostics ≤ 0.02·τu; wave bursts ≥20 samples per
+  shortest resolved period, windows ≥10 slow periods.
+- Events: polarity sets at |Dsurf| > 0.4·Dref (Dref from training only),
+  persistence τu; reversal = committed-set to committed-set; sensitivity at
+  0.25 and 0.6. Parent state (not sample) is the resampling unit.
+</file>
+
+</files>

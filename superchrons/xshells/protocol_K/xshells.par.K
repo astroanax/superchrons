@@ -3,6 +3,8 @@
 # stress-free impenetrable velocity boundaries. Magnetic domain + scalar
 # forcing need a separate physical setup; baseline bottom flux found by
 # pilot-only search for a sustained dipolar neutral state, then frozen.
+# Launched with the hybrid binary (§F7):
+#   srun --cpu-bind=verbose,cores ./xsbig_hyb
 
 nu = 1.0
 eta = 0.2

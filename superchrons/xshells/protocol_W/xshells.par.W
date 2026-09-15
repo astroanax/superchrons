@@ -1,7 +1,10 @@
 # Partial xshells.par — Protocol W transport/rotation/fluid boundaries (§F1, §F2)
 # Viscous units L = 1. NOT a complete dynamo: still supply gravity/buoyancy
 # conversion, base profile, flux map (heteroflux problem), grid, restarts.
-# Anchors: EMS = 1.2e-5 → E_omega = 2.4e-5; Pr = Pm = 1; RaV = 2500.
+# Anchors: EMS = 1.2e-5 → E_omega = 2.4e-5 → Omega0 ≈ 41666.7;
+# Pr = Pm = 1; RaV = 2500. Launched with the hybrid binary (§F7):
+#   export OMP_NUM_THREADS=20 OMP_PLACES=cores OMP_PROC_BIND=close
+#   srun --cpu-bind=verbose,cores ./xsbig_hyb
 
 nu = 1.0
 eta = 1.0

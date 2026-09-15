@@ -1,22 +1,24 @@
 # Superchron numerical experiments — setup for audit (no runs yet)
 
-Source paper: `~/.hermes/webui/attachments/027552552498/main-28.pdf`
-(plaintext: same dir, `main-28.txt`). Appendix F (§F1–F6, txt lines 1737–2183)
-is the plan implemented here. It is a proposed plan, not a claim that runs exist.
+Source paper: main-29.pdf (plaintext `main-29.txt` alongside it in the
+attachments dir). Appendix F (§F1–F7) is the plan implemented here — a proposed
+plan, not a claim that runs exist.
 
 ## What this folder holds
 
-- `00_provenance/` — run-manifest template. Every run gets its own directory
-  with an immutable manifest copy (paper §F1: commit, patches, compiler/MPI
-  versions, grid, inputs, restart provenance, seeds).
-- `xshells/` — build script + per-protocol native input fragments
+- `00_provenance/` — manifest template. Every run gets its own directory with
+  an immutable manifest copy (§F1: commit, patches, compiler/MPI versions,
+  grid, inputs, restart provenance, seeds; plus §F7: hybrid binary, task/thread
+  layout, binding).
+- `xshells/` — hybrid build script + per-protocol native input fragments
   (`protocol_W/`, `protocol_K/`, `protocol_P/`). XSHELLS 2.13 is the primary
-  implementation (§F1); MagIC 6.3 is the cross-code contrast.
+  implementation (§F1); MagIC 6.3 is the contrast after first validation (§F7).
 - `magic/` — MagIC counterpart notes (independent setup, not translated names).
-- `analysis/` — executable paper code (projected drag, Poisson interval) plus
-  stubs for the event detector and dipole-budget check. Runs anywhere.
-- `slurm/` — job templates for madhava.
-- `run_matrix.md` — pilot cells per protocol.
+- `analysis/` — `f5_prototype.py` (paper §F5 toy checks) + `budget.py`
+  (§F7 Eqs. F9–F11 campaign arithmetic). Solver-independent; run anywhere.
+- `slurm/` — `bench.sbatch` (45-min testq benchmark), `pilot.sbatch`
+  (production-pilot template). Both launch `xsbig_hyb` via `srun`.
+- `run_matrix.md` — pilot cells per protocol + §F7 staged-allocation order.
 
 ## Common physics (§F1)
 
@@ -35,21 +37,37 @@ Boundary-flux maps for matched comparisons (§F1, F2):
 
 Report qa, both extrema, mean, and total-vs-superadiabatic denominator.
 
-## Protocol anchors
+## Madhava execution (§F7)
 
-- W (slow-MAC-wave, §F2): EMS = 1.2e-5, Pr = Pm = 1, RaV = 2500;
-  Y21 at q* = 17, 18, 20 (dipolar / reversing / multipolar), Y22 symmetric
-  control. Seven pilot cells + reflected/mixed patterns.
-- K (upwelling vs circulation, §F3): E_omega = 1e-4, Pr = 1, Pm = 5,
-  bottom-driven, stress-free impenetrable (BC_U = 2,2); η = 0.2, κT = 1,
-  Ω = 1e4 in viscous units. Layer matrix Hs/L × Nmax/Ω + power reporting.
-- P (stratified dipole–quadrupole, §F4): E_omega = 1e-3, Pr = 1, Pm = 10,
-  Ra/Rac = 25, Y10+Y30 at δq = 0.0175 (half-range); Hs/L = 0, 0.12, 0.24.
+- Primary binary `xsbig_hyb` (CPU hybrid MPI/OpenMP). `xsbig_mpi` is MPI-only;
+  `xsbig_hyb2` is a different decomposition — no substitution without measuring.
+- Nothing computational on the login node; builds and runs go in allocations.
+- Layouts to compare on one full node: 2 ranks × 20 threads vs 4 ranks × 10
+  threads; verify socket placement/binding/actual CPU use; no hyperthread
+  oversubscription initially (`--hint=nomultithread`).
+- Partitions share 31×40-CPU nodes (scheduler mem field 169000 units); CPU
+  ceilings are 120/job (mediumq, ≤3 nodes) and 320/job (longq, ≤8 nodes) —
+  ceilings, not entitlements. Multinode only if size/throughput justifies it.
+- Request memory explicitly (site default 1 GB/CPU). The 80000M in the bench
+  template is a provisional pilot allowance, not a measured requirement.
+- Benchmarks before production: unmodified dynamo benchmark + §F1 checks,
+  uninterrupted-vs-restart comparison, then a full pilot with diagnostics.
+  Nr=200/ℓmax=100 measures performance, not resolution. Larger E is not
+  automatically cheaper.
+- Record sim-time advance per wall hour from output timestamps (not iteration
+  counts), sec/step, peak mem, startup/checkpoint cost, output bytes, CPU use.
+- Go/no-go: complete config, passing numerical+restart tests, validated
+  diagnostics, fitting memory, measured throughput supporting fixed exposure
+  in budget — else cut cases or report bounds, never silently weaken resolution
+  or count correlated clones as evidence.
 
 ## What needs your audit decision
 
-1. Reproduce one anchor per protocol before any intervention.
-2. Interventions (projector damping, δu upwelling, parity-block α) are
-   custom code to write against the pinned XSHELLS revision — not switches.
-3. Prespecified primary contrast per mechanism + one common train/test split
-   before production (paper §F6).
+1. Fetch + pin the 2.13-series XSHELLS revision (off-madhava, then scp up).
+2. Reproduce one anchor per protocol before any intervention.
+3. Interventions (projector damping, δu upwelling, parity-block α) are custom
+   code against the pinned revision — not switches.
+4. Prespecified primary contrast per mechanism + one common train/test split
+   before production (§F6). Debugging batch first: 4 parents × 2 clones × 2
+   arms = 16 short continuations; the 16×8×2 design (256 runs) only after
+   manipulation and budget checks pass.
