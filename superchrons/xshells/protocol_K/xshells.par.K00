@@ -11,9 +11,10 @@
 # the bottom-flux search procedure + N^2(r) check + power bookkeeping across
 # the Hs/L x Nmax/Omega layer matrix are defined in run_matrix.md and still
 # to be executed. Stratification layers (Hs/L > 0) need the maintaining-term
-# extension (custom code, post-anchor per audit decision).
+# extension (custom code, post-anchor per audit decision). DEVELOPMENT until
+# the baseline search converges (review round 2): job name carries _DEV.
 ##########################################################################
-job = K00_baseline
+job = K00_baseline_DEV
 
 ### USER DEFINED VARIABLES ###
 E = 1e-4

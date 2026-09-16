@@ -1,10 +1,15 @@
 # Run manifest — copy into every run directory, fill in, never edit after.
-# Paper main-29 §F1 + §F7: archive immutable copies before production.
-# Preflight (slurm/preflight.py --mode science) requires EVERY field below
-# non-empty; acceptance logs must exist on disk; checksums must match.
+# Paper main-29 §F1 + §F7. Preflight (slurm/preflight.py) enforces this
+# schema: EVERY field below must be present and non-empty; case_status gates
+# the launch tier (benchmark | development | validated — review round 2:
+# tier lives here, never in comment text). Science launches additionally
+# require calibration_status=calibrated + a calibration reference.
 
 - date:
 - protocol/cell: (e.g. W02)
+- case_status: (benchmark | development | validated)
+- calibration_status: (calibrated | uncalibrated)
+- calibration reference: (source definition + imposed-flux derivation, or blank if uncalibrated)
 - xshells commit (pinned 2.13-series revision):
 - shtns commit:
 - patches applied:

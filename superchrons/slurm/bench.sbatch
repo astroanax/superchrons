@@ -1,7 +1,10 @@
 #!/bin/bash
 # 45-minute hybrid benchmark, testq, single node. Paper main-29 §F7 template.
-# BENCHMARK MODE: preflight checks binary+par presence only (no manifest,
-# no acceptance logs). Never reuse this script for science runs.
+# BENCHMARK MODE (case_status=benchmark): preflight checks par schema +
+# binary presence/checksum; no acceptance logs. Never reuse for science runs.
+# Run dir must be prepared with tools/prepare_run.sh (self-contained: binary,
+# input, env.sh staged; preflight resolved via absolute path). RESTART is set
+# by the preparer, not hand-edited here.
 #SBATCH --job-name=xs-bench
 #SBATCH --partition=testq
 #SBATCH --nodes=1
@@ -13,15 +16,13 @@
 #SBATCH --output=bench-%j.out
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?}"
-module load gnu8/8.3.0 openmpi3/3.1.4 2>/dev/null || module load gnu8 openmpi3
+source ./env.sh   # staged by prepare_run.sh: modules + MKL path + OMP binding
 export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
-export OMP_PLACES=cores
-export OMP_PROC_BIND=close
-# Manifest path is required as an argument even in bench mode so the run is
-# traceable; acceptance fields are not enforced here.
 MANIFEST="${MANIFEST:-MANIFEST.md}"
-python3 slurm/preflight.py --mode bench --manifest "$MANIFEST" \
-  --par ./xshells.par --binary ./xsbig_hyb --no-restart --outdir ./output \
+PREFLIGHT="${PREFLIGHT:-/home/rehan/workspaces/ceas-iisc/superchrons/slurm/preflight.py}"
+if [[ "${RESTART:-0}" == "1" ]]; then RFLAG="--expect-restart"; else RFLAG="--no-restart"; fi
+python3 "$PREFLIGHT" --mode bench --manifest "$MANIFEST" \
+  --par ./xshells.par --binary ./xsbig_hyb "$RFLAG" --outdir ./output \
   || exit 2
 # If the site MPI needs an explicit Slurm plugin or site-supported mpirun
 # launch instead of srun, use that tested method. Do not guess a plugin name.

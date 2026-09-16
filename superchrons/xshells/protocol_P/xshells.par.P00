@@ -7,11 +7,18 @@
 # Source anchor: E_omega = 1e-3, Pr = 1, Pm = 10, Ra/Rac = 25 with
 # Rac ≈ 55.87 (m = 4 onset, per benchmark comment) → Ra = 1400,
 # Y10+Y30 pattern at dq = 0.0175 half-range convention.
+# RESOLUTION (review round 2): stock benchmark Mmax = 11 / Mres = 4 admits
+# only azimuthal orders divisible by 4 — a different dynamical system, not a
+# cheaper resolution. Science cells use Mres = 1; Mmax = 32 here is a pilot
+# choice subject to the §F1 1.5x refinement check before production.
+# ONSET (review round 2): the benchmark's Rac assumed BC_T = 1,1; P00 uses
+# 1,2, so its onset is NOT transferable — Ra = 1400 is uncalibrated until
+# the onset is recomputed for these boundary conditions (AUDIT item 1).
 # Base: problems/geodynamo/xshells.par. hpp: stock geodynamo file unchanged.
 # AUDIT: half-range dq convention and Ra/Rac onset value must be confirmed
 # against the source (PARODY-JA) definitions; dq below is the pilot value.
 ##########################################################################
-job = P00_Hs0
+job = P00_Hs0_DEV
 
 ### USER DEFINED VARIABLES ###
 E = 1e-3
@@ -52,8 +59,8 @@ iter_save = 50
 
 ### SHT ###
 Lmax = 47
-Mmax = 11
-Mres = 4
+Mmax = 32
+Mres = 1
 
 ### OPTIONS ###
 interp = 1

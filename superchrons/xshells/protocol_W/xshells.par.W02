@@ -11,9 +11,12 @@
 # AUDIT (not TODO): q*-to-dqo conversion must be verified against the lab
 # code (their q* is normalized by mean superadiabatic flux); the value below
 # reproduces the file/power convention of the stock heteroflux example and
-# is a pilot placeholder, not a calibrated reproduction.
+# is a pilot placeholder, not a calibrated reproduction. Until the conversion
+# is derived from the source definition and the actual imposed flux (review
+# round 2), this cell is DEVELOPMENT: job name carries _DEV, and its manifest
+# must set case_status=development, calibration_status=uncalibrated.
 ##########################################################################
-job = W02_Y21_q18
+job = W02_Y21_q18_DEV
 
 ### USER DEFINED VARIABLES ###
 Eom = 2.4e-5

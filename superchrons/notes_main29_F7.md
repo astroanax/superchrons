@@ -158,3 +158,31 @@ Source is the author's own main-29.pdf — untouched. These are my notes only.
   stratification extension) listed per-protocol in AUDIT_QUESTIONS.md.
   build_madhava.sh updated to proven MKL recipe. Analysis suites re-pass
   (fresh container needed pip install numpy/scipy first).
+- ~18:00 (16 Sep) review round-2 fixes applied locally, no launches:
+  1. detect_events rewritten: NaN/time-gap segmentation (default max gap =
+     tau_u), inf rejected, committed spans report (sign, t_enter,
+     t_satisfied, t_exit), transitions link ONLY across well-sampled gaps,
+     uncommitted_spans honestly counts leading/gap/tail record with reasons.
+     All four review regression cases verified as new unit tests.
+  2. preflight.py rewritten around case_status (benchmark|development|
+     validated): science requires validated + calibrated + reference,
+     mandatory checksums, PASS-marker acceptance logs, verified checkpoint
+     artifacts, par/solver restart agreement. 8-case gate test: GO only when
+     everything holds, REFUSE otherwise (incl. dev-in-science, markerless
+     log, bare restart dir, restart mismatch). No comment-text scanning.
+  3. P00: Mres 4→1, Mmax 11→32 (pilot, refinement check required); onset
+     non-transferability documented (BC_T differs from benchmark).
+  4. Flux maps physically verified (tools/verify_fluxmaps.py, scipy
+     reconstruction): zero mean + parity confirmed (Y21 -1, Y22 +1,
+     Y10+Y30 -1); measured RMS ~= 0.1995, NOT unit — header claim corrected,
+     dq/q* conversion must absorb the scale.
+  5. W02/K00/P00 jobs renamed *_DEV; manifests require case_status +
+     calibration_status.
+  6. build_madhava.sh: SHTns install under flock (reuse unless REBUILD_DEPS),
+     CUDA placeholders documented as fabricated in build log.
+  7. tools/prepare_run.sh (self-contained run dirs + restart agreement) +
+     tools/record_acceptance.sh (PASS-marker convention); bench/pilot
+     launchers stage env.sh (modules + MKL path), absolute preflight path.
+  Status note for review §"notes": agreed — login run was smoke only;
+  validation + compute-node execution still pending. No full-scale sims
+  launched (per user instruction); Slurm queue currently empty.

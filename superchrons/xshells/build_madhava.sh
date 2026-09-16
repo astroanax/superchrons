@@ -45,16 +45,37 @@ export CC=mpicc CXX=mpicxx FC=mpif90
 MKL=/opt/apps/oneapi-mkl/2025.0.1
 export LD_LIBRARY_PATH=$MKL/lib/intel64:${LD_LIBRARY_PATH:-}
 
-# --- SHTns (OpenMP enabled — required for the hybrid target) ---
+# --- SHTns: ONE immutable install per toolchain, under a lock (review §6) ---
+# Concurrent case builds previously raced in the same source/install dirs.
+# The dependency install below runs under flock; the lock is held for the
+# whole configure+build+install. A second build waits instead of clobbering.
+SHTNS_INSTALL="$SRC/shtns-install"
+exec 9>"$SRC/.shtns-build.lock"
+flock 9
 cd "$SN"
-./configure --prefix="$SRC/shtns-install" --enable-openmp --enable-mkl \
-  LDFLAGS="-L$MKL/lib/intel64" CPPFLAGS="-I$MKL/include" \
-  2>&1 | tee "$SRC/shtns-configure.log"
-make -j"$NJOBS" 2>&1 | tee "$SRC/shtns-build.log"
-# Quirk (non-CUDA build): install expects shtns_cuda.h / shtns_cuda.f03
-# which the sdist omits; empty placeholders satisfy it.
-touch shtns_cuda.h shtns_cuda.f03
-make install 2>&1 | tee -a "$SRC/shtns-build.log"
+if [[ -f "$SHTNS_INSTALL/lib/libshtns_omp.a" && -z "${REBUILD_DEPS:-}" ]]; then
+  echo "SHTns install present, reusing (set REBUILD_DEPS=1 to rebuild)."
+else
+  ./configure --prefix="$SHTNS_INSTALL" --enable-openmp --enable-mkl \
+    LDFLAGS="-L$MKL/lib/intel64" CPPFLAGS="-I$MKL/include" \
+    2>&1 | tee "$SRC/shtns-configure.log"
+  make -j"$NJOBS" 2>&1 | tee "$SRC/shtns-build.log"
+  # DOCUMENTED QUIRK (not silent): the 3.7.5 sdist omits shtns_cuda.h /
+  # shtns_cuda.f03, but its own Makefile install-lib target copies them.
+  # Upstream has no non-CUDA variants of these files to fetch, so empty
+  # placeholders are created AND recorded as fabricated below. If upstream
+  # ever ships them, replace this block with the real files.
+  for f in shtns_cuda.h shtns_cuda.f03; do
+    if [[ ! -f "$f" ]]; then
+      echo "WARNING: fabricating empty placeholder $f (see comment above)"
+      touch "$f"
+      echo "FABRICATED PLACEHOLDER: $f (empty, install-target requirement)" \
+        >> "$SRC/shtns-build.log"
+    fi
+  done
+  make install 2>&1 | tee -a "$SRC/shtns-build.log"
+fi
+flock -u 9
 
 # --- XSHELLS hybrid in a per-case build dir (fix §1) ---
 BUILDDIR="$SRC/build-$CASE"

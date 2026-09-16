@@ -1,9 +1,10 @@
 #!/bin/bash
 # Production-pilot template (shortq example, single node). Paper main-29 §F7.
-# SCIENCE MODE: refuses launch unless the manifest is complete, checksums
-# match, acceptance logs exist, the par fragment has no TODO markers, and the
-# output dir state matches the restart expectation. Set RESTART=1 for a
-# continuation run, RESTART=0 for a fresh run.
+# SCIENCE MODE (case_status=validated): full gate — complete manifest,
+# matching checksums, calibration_status=calibrated, acceptance logs with
+# PASS markers, verified checkpoints, par/solver restart agreement.
+# Run dir must be prepared with tools/prepare_run.sh. RESTART comes from the
+# preparer; the par-file restart flag must already agree (preflight enforces).
 #SBATCH --job-name=xs-pilot
 #SBATCH --partition=shortq
 #SBATCH --nodes=1
@@ -15,13 +16,12 @@
 #SBATCH --output=run_%j.log
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?}"
-module load gnu8/8.3.0 openmpi3/3.1.4 2>/dev/null || module load gnu8 openmpi3
+source ./env.sh   # staged by prepare_run.sh: modules + MKL path + OMP binding
 export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
-export OMP_PLACES=cores
-export OMP_PROC_BIND=close
 MANIFEST="${MANIFEST:-MANIFEST.md}"
+PREFLIGHT="${PREFLIGHT:-/home/rehan/workspaces/ceas-iisc/superchrons/slurm/preflight.py}"
 if [[ "${RESTART:-0}" == "1" ]]; then RFLAG="--expect-restart"; else RFLAG="--no-restart"; fi
-python3 slurm/preflight.py --mode science --manifest "$MANIFEST" \
+python3 "$PREFLIGHT" --mode science --manifest "$MANIFEST" \
   --par ./xshells.par --binary ./xsbig_hyb "$RFLAG" --outdir ./output \
   || exit 2
 srun --cpu-bind=verbose,cores ./xsbig_hyb
