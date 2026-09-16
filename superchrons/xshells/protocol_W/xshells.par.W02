@@ -1,0 +1,66 @@
+##########################################################################
+# Protocol W cell W02 — reversing anchor (paper §F2, main-29)
+# Y21 anti-symmetric forcing at q* = 18. Dipolar/reversing/multipolar
+# anchors are W01/W02/W03 at q* = 17/18/20; Y22 symmetric controls W04-06.
+# Source: Majumder & Sreenivasan 2026 (JFM): EMS = 1.2e-5, Pr = Pm = 1,
+# RaV = 2500, basal thermal driving, no-slip velocity, insulating
+# inner/outer magnetic boundaries, source heat-flux normalization.
+# XSHELLS E_omega = 2*EMS = 2.4e-5 (paper §F1: XSHELLS Omega0 takes E_omega).
+# Base: problems/geodynamo/xshells.par + problems/heteroflux/ usage
+# (tp = <base> | heteroflux(file)*dqo). hpp: stock geodynamo file unchanged.
+# AUDIT (not TODO): q*-to-dqo conversion must be verified against the lab
+# code (their q* is normalized by mean superadiabatic flux); the value below
+# reproduces the file/power convention of the stock heteroflux example and
+# is a pilot placeholder, not a calibrated reproduction.
+##########################################################################
+job = W02_Y21_q18
+
+### USER DEFINED VARIABLES ###
+Eom = 2.4e-5
+Ra = 2500
+qstar = 18
+dqo = -0.018
+
+### PHYSICAL PARAMS ###
+Omega0 = 1/Eom
+nu = 1.0
+kappa = 1.0
+eta = 1.0
+
+### INITIAL FIELDS ###
+u = 0
+b = bench2001*5/sqrt(1.0*Eom)
+tp = bench2001*0.1 | heteroflux(cmb_Y21.txt)*dqo
+tp0 = delta*-1
+phi0 = radial*Ra/Eom
+
+### BOUNDARY CONDITIONS AND RADIAL DOMAINS ###
+BC_U = 1,1
+BC_T = 1,2
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+kill_sbr = 1
+
+### NUMERICAL SCHEME ###
+NR = 192
+N_BL = 10,10
+dt_adjust = 1
+dt = 0.00005
+iter_max = 20000
+sub_iter = 100
+iter_save = 50
+
+### SHT ###
+Lmax = 159
+Mmax = 128
+Mres = 1
+
+### OPTIONS ###
+interp = 1
+restart = 0
+movie = 1
+prec_out = 2
+backup_time = 235
+nbackup = 6
+m_drift = 4

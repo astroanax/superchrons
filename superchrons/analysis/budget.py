@@ -14,29 +14,56 @@ into code time with a stated reference velocity first.
 import math
 
 
+def _check_int(name, v):
+    if isinstance(v, bool) or not isinstance(v, (int,)) or v <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {v!r}")
+    return v
+
+
+def _check_num(name, v, minimum=0.0, strict=False):
+    if isinstance(v, bool) or not isinstance(v, (int, float)) \
+            or not math.isfinite(v):
+        raise ValueError(f"{name} must be finite, got {v!r}")
+    if strict and not v > minimum:
+        raise ValueError(f"{name} must be > {minimum}, got {v!r}")
+    if not strict and not v >= minimum:
+        raise ValueError(f"{name} must be >= {minimum}, got {v!r}")
+    return float(v)
+
+
 def trajectory_hours(Tneed, vn, toverhead=0.0):
-    if vn <= 0 or Tneed < 0 or toverhead < 0:
-        raise ValueError("vn > 0, Tneed/toverhead >= 0 required")
+    Tneed = _check_num("Tneed", Tneed, 0.0)
+    vn = _check_num("vn", vn, 0.0, strict=True)
+    toverhead = _check_num("toverhead", toverhead, 0.0)
     return Tneed / vn + toverhead
 
 
 def node_hours(n, tn):
+    _check_int("n", n)
+    tn = _check_num("tn", tn, 0.0)
     return n * tn
 
 
 def efficiency(vn, n, v1):
+    vn = _check_num("vn", vn, 0.0, strict=True)
+    _check_int("n", n)
+    v1 = _check_num("v1", v1, 0.0, strict=True)
     return vn / (n * v1)
 
 
 def campaign_hours(Nrun, m, n, tn):
-    if n <= 0 or m < n or Nrun <= 0:
-        raise ValueError("need 0 < n <= m, Nrun > 0")
+    _check_int("Nrun", Nrun)
+    _check_int("m", m)
+    _check_int("n", n)
+    tn = _check_num("tn", tn, 0.0)
+    if m < n:
+        raise ValueError(f"granted nodes m={m} < per-trajectory n={n}")
     k = m // n
     return math.ceil(Nrun / k) * tn, k
 
 
 if __name__ == "__main__":
-    # Self-check with placeholder numbers (not a measurement).
+    # Placeholder self-check (not a measurement).
     v1, v2 = 1.0, 1.7
     tn = trajectory_hours(20.0, v2, toverhead=0.5)
     assert math.isclose(tn, 20.0 / 1.7 + 0.5)
@@ -44,4 +71,23 @@ if __name__ == "__main__":
     assert math.isclose(efficiency(v2, 2, v1), 0.85)
     camp, k = campaign_hours(16, m=4, n=2, tn=tn)
     assert k == 2 and math.isclose(camp, 8 * tn)
+    # Rejection checks (fix §6): NaN/inf/negative/fractional/zero-work.
+    bad = [lambda: trajectory_hours(20.0, 0.0),
+           lambda: trajectory_hours(-1.0, 1.0),
+           lambda: trajectory_hours(float("nan"), 1.0),
+           lambda: trajectory_hours(20.0, float("inf")),
+           lambda: node_hours(0, 1.0), lambda: node_hours(2.5, 1.0),
+           lambda: node_hours(2, -1.0),
+           lambda: efficiency(1.7, 2, 0.0),
+           lambda: campaign_hours(16, m=1, n=2, tn=1.0),
+           lambda: campaign_hours(0, m=4, n=2, tn=1.0),
+           lambda: campaign_hours(16, m=4, n=2, tn=float("nan"))]
+    for i, fn in enumerate(bad):
+        try:
+            fn()
+            raise SystemExit(f"rejection check {i} FAILED")
+        except ValueError:
+            pass
+    # Zero-work request is valid and costs only overhead.
+    assert trajectory_hours(0.0, 1.5, toverhead=0.5) == 0.5
     print("budget checks pass")

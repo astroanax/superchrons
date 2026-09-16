@@ -1,0 +1,66 @@
+##########################################################################
+# Protocol K cell K00 — neutral baseline search start (paper §F3, main-29)
+# FLUX-CONTROLLED (audit decision): BC_T = 2,2. The pilot searches a bottom
+# (inner) scalar flux for a sustained dipolar neutral state and freezes it
+# before treatments. Fixed-temperature inner would be another experiment.
+# Base: problems/heteroflux/xshells.par.E1e-4_hRm (Frasson+ 2024 setup:
+# E = 1e-4, flux BCs, thermochem base) reduced to single thermal buoyancy
+# with T&T-style strong temperature dependence via Pm = 5 (eta = 0.2) and
+# stress-free impenetrable velocity (BC_U = 2,2). hpp: stock geodynamo file.
+# AUDIT: Ra = 1.5e8 is the Frasson starting value, not a converged baseline;
+# the bottom-flux search procedure + N^2(r) check + power bookkeeping across
+# the Hs/L x Nmax/Omega layer matrix are defined in run_matrix.md and still
+# to be executed. Stratification layers (Hs/L > 0) need the maintaining-term
+# extension (custom code, post-anchor per audit decision).
+##########################################################################
+job = K00_baseline
+
+### USER DEFINED VARIABLES ###
+E = 1e-4
+Pm = 5
+Pr = 1
+Ra = 1.5e8
+
+### PHYSICAL PARAMS ###
+Omega0 = 1/E
+nu = 1.0
+kappa = 1.0/Pr
+eta = 1/Pm
+
+### INITIAL FIELDS ###
+u = 0
+b = rands*1e-3
+tp = rands*0.1
+tp0 = delta*-1
+phi0 = radial*Ra/Pr
+
+### BOUNDARY CONDITIONS AND RADIAL DOMAINS ###
+BC_U = 2,2
+BC_T = 2,2
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+kill_sbr = 1
+
+### NUMERICAL SCHEME ###
+NR = 144
+N_BL = 0,0
+dt_adjust = 1
+dt = 0.00001
+iter_max = 200000
+sub_iter = 100
+iter_save = 50
+
+### SHT ###
+Lmax = 127
+Mmax = 95
+Mres = 1
+
+### OPTIONS ###
+interp = 1
+restart = 0
+movie = 1
+prec_out = 2
+backup_time = 235
+nbackup = 6
+C_alfv = 4.8

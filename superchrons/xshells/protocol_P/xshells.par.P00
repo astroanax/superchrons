@@ -1,0 +1,65 @@
+##########################################################################
+# Protocol P cell P00 — unstratified screen start (paper §F4, main-29)
+# Hs/L = 0: no stable layer, so this cell launches with STOCK code and
+# establishes the Y10+Y30 forced baseline. Layered cells (Hs/L = 0.12, 0.24
+# at Nmax/Omega = 10) follow after this reproduces; they need the custom
+# stratified-tp0 + maintaining-term extension (post-anchor per audit).
+# Source anchor: E_omega = 1e-3, Pr = 1, Pm = 10, Ra/Rac = 25 with
+# Rac ≈ 55.87 (m = 4 onset, per benchmark comment) → Ra = 1400,
+# Y10+Y30 pattern at dq = 0.0175 half-range convention.
+# Base: problems/geodynamo/xshells.par. hpp: stock geodynamo file unchanged.
+# AUDIT: half-range dq convention and Ra/Rac onset value must be confirmed
+# against the source (PARODY-JA) definitions; dq below is the pilot value.
+##########################################################################
+job = P00_Hs0
+
+### USER DEFINED VARIABLES ###
+E = 1e-3
+Pm = 10
+Pr = 1
+Ra = 1400
+dq = 0.0175
+
+### PHYSICAL PARAMS ###
+Omega0 = 1/E
+nu = 1.0
+kappa = 1.0
+eta = 1/Pm
+
+### INITIAL FIELDS ###
+u = 0
+b = bench2001*5/sqrt(Pm*E)
+tp = bench2001*0.1 | heteroflux(cmb_Y10_Y30.txt)*dq
+tp0 = delta*-1
+phi0 = radial*Ra/E
+
+### BOUNDARY CONDITIONS AND RADIAL DOMAINS ###
+BC_U = 1,1
+BC_T = 1,2
+R_U = 7/13 : 20/13
+R_T = 7/13 : 20/13
+R_B = 7/13 : 20/13
+kill_sbr = 1
+
+### NUMERICAL SCHEME ###
+NR = 96
+N_BL = 10,10
+dt_adjust = 1
+dt = 0.0001
+iter_max = 20000
+sub_iter = 100
+iter_save = 50
+
+### SHT ###
+Lmax = 47
+Mmax = 11
+Mres = 4
+
+### OPTIONS ###
+interp = 1
+restart = 0
+movie = 1
+prec_out = 2
+backup_time = 240
+nbackup = 6
+m_drift = 4
